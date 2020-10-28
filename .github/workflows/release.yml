@@ -2,30 +2,28 @@ name: Release
 on:
   push:
     branches:
-      - master
+      - main
+
 jobs:
-  release-npm:
+  release:
     name: Release
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v1
+        uses: actions/checkout@master
+        with:
+          ref: main
       - name: Setup Node.js
         uses: actions/setup-node@v1
         with:
           node-version: 12
-      - run: echo -e "@madnesslabs:registry=https://npm.pkg.github.com/\n//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_PAT }}" > ~/.npmrc
+      - run: echo -e "@madnesslabs:registry=https://npm.pkg.github.com/\n//npm.pkg.github.com/:_authToken=${{ secrets.PERSONAL_ACCESS_TOKEN }}" > ~/.npmrc
       - name: Install dependencies
-        run: npm ci
-      - run: echo -e "//registry.npmjs.org/:_authToken=${{secrets.NPM_TOKEN}}" > ~/.npmrc
-      - name: Release NPM
+        run: npm install --verbose --unsafe-perm
+      - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npx semantic-release
-      - run: echo -e "@madnesslabs:registry=https://npm.pkg.github.com/\n//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_PAT }}" > ~/.npmrc
-      - name: Release Github Registry
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Release Github Package
         run: npm publish

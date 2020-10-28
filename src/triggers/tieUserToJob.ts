@@ -6,7 +6,7 @@ import tieUserToJobUnit from "../units/tieUserToJob/tieUserToJob";
 export default functions.https.onRequest(async (req, res) => {
   connect();
 
-  return res.status(200).send({
+  res.status(200).send({
     job: await tieUserToJobUnit(req.body && req.body.data ? req.body.data : {})
   });
 });

@@ -8,11 +8,10 @@ scalar DateTime
 
 # The information for a job ticket
 type Job {
-  id: ID!
-  customer: String
-
   # The address of the job
   address: String!
+  customer: String
+  id: ID!
 
   # The primary phone number to contact for the job
   phone: String
@@ -26,8 +25,14 @@ input JobInput {
 
 # The default input to use for all list queries
 input ListQueryInput {
+  # The ID of the first result from the current
+  back: String
+
   # The number of results to return
   limit: Float
+
+  # The ID of the last result from the current page
+  next: String
 
   # Order the list of results by this field
   orderBy: String
@@ -35,14 +40,14 @@ input ListQueryInput {
   # The directions to order the results
   orderDirection: String
 
+  # Where a list of values for a column contains a value
+  whereArrayContains: String
+
+  # Where a column value is any of array of values
+  whereArrayContainsAny: String
+
   # Where a column matches a value
   whereEqual: String
-
-  # Where a column is less than a value
-  whereLessThan: String
-
-  # Where a column is less than or equal to a value
-  whereLessThanOrEqual: String
 
   # Where a column is greater than a value
   whereGreaterThan: String
@@ -50,34 +55,30 @@ input ListQueryInput {
   # Where a column is greater than or equal to a value
   whereGreaterThanOrEqual: String
 
-  # Where a list of values for a column contains a value
-  whereArrayContains: String
-
-  # Where a column value is any of array of values
-  whereArrayContainsAny: String
-
   # Where a column value is in an array of values
   whereIn: String
 
-  # The ID of the last result from the current page
-  next: String
+  # Where a column is less than a value
+  whereLessThan: String
 
-  # The ID of the first result from the current
-  back: String
+  # Where a column is less than or equal to a value
+  whereLessThanOrEqual: String
 }
 
 # The information for an event logged on the system
 type Log {
+  # When the log was created
+  createdAt: String
+
+  # Who created the log
+  createdBy: User
   id: ID!
-
-  # The type of log
-  type: String!
-
-  # The name of the endpoint being accessed or event being responded to
-  name: String!
 
   # The input data sent to the endpoint
   input: String
+
+  # The name of the endpoint being accessed or event being responded to
+  name: String!
 
   # The output data returned to the endpoint
   output: String
@@ -88,39 +89,33 @@ type Log {
   # The amount of time it took the functionality to run
   resolveTime: Float!
 
-  # When the log was created
-  createdAt: String
-
-  # Who created the log
-  createdBy: User
+  # The type of log
+  type: String!
 }
 
 # The information for a migration
 type Migration {
-  id: ID!
   createdAt: DateTime
+  id: ID!
 }
 
 type Mutation {
-  addUser(
-    # Add a new User document to the Users collection.
-    data: UserInput!
-  ): User!
-  editUser(
-    # Update a User document in the Users collection.
-    data: UserInput!
-
-    # The ID of the User document in the Users collection
-    id: String!
-  ): User!
-  deleteUser(
-    # The ID of the User document being deleted in the Users collection
-    id: String!
-  ): User!
   addJob(
     # Add a new Job document to the Jobs collection.
     data: JobInput!
   ): Job!
+  addUser(
+    # Add a new User document to the Users collection.
+    data: UserInput!
+  ): User!
+  deleteJob(
+    # The ID of the Job document being deleted in the Jobs collection
+    id: String!
+  ): Job!
+  deleteUser(
+    # The ID of the User document being deleted in the Users collection
+    id: String!
+  ): User!
   editJob(
     # Update a Job document in the Jobs collection.
     data: JobInput!
@@ -128,19 +123,22 @@ type Mutation {
     # The ID of the Job document in the Jobs collection
     id: String!
   ): Job!
-  deleteJob(
-    # The ID of the Job document being deleted in the Jobs collection
+  editUser(
+    # Update a User document in the Users collection.
+    data: UserInput!
+
+    # The ID of the User document in the Users collection
     id: String!
-  ): Job!
+  ): User!
   tieUserToJob(data: TieUserToJobInput!): Job!
 }
 
 type Query {
-  # Get a specific Migration document from the Migrations collection.
-  migration(id: String!): Migration
+  # Get a specific Job document from the Jobs collection.
+  job(id: String!): Job
 
-  # Get a list of Migration documents from the Migrations collection.
-  migrations(data: ListQueryInput): [Migration!]
+  # Get a list of Job documents from the Jobs collection.
+  jobs(data: ListQueryInput): [Job!]
 
   # Get a specific Log document from the Logs collection.
   log(id: String!): Log
@@ -148,33 +146,32 @@ type Query {
   # Get a list of Log documents from the Logs collection.
   logs(data: ListQueryInput): [Log!]
 
+  # Get a specific Migration document from the Migrations collection.
+  migration(id: String!): Migration
+
+  # Get a list of Migration documents from the Migrations collection.
+  migrations(data: ListQueryInput): [Migration!]
+
   # Get a specific User document from the Users collection.
   user(id: String!): User
 
   # Get a list of User documents from the Users collection.
   users(data: UserListQueryInput): [User!]
-
-  # Get a specific Job document from the Jobs collection.
-  job(id: String!): Job
-
-  # Get a list of Job documents from the Jobs collection.
-  jobs(data: ListQueryInput): [Job!]
 }
 
 # The id of the job and user being tied together.
 input TieUserToJobInput {
-  user: String!
   job: String!
+  user: String!
 }
 
 # The information for a user
 type User {
-  id: ID!
-  name: String!
-
   # The user's email address
   email: String
+  id: ID!
   jobs: [Job!]!
+  name: String!
 }
 
 # Editable user data
@@ -184,8 +181,15 @@ input UserInput {
 
 # A custom set of params to use when doing list query
 input UserListQueryInput {
+  # The ID of the first result from the current
+  back: String
+  hasEmail: Boolean
+
   # The number of results to return
   limit: Float
+
+  # The ID of the last result from the current page
+  next: String
 
   # Order the list of results by this field
   orderBy: String
@@ -193,14 +197,14 @@ input UserListQueryInput {
   # The directions to order the results
   orderDirection: String
 
+  # Where a list of values for a column contains a value
+  whereArrayContains: String
+
+  # Where a column value is any of array of values
+  whereArrayContainsAny: String
+
   # Where a column matches a value
   whereEqual: String
-
-  # Where a column is less than a value
-  whereLessThan: String
-
-  # Where a column is less than or equal to a value
-  whereLessThanOrEqual: String
 
   # Where a column is greater than a value
   whereGreaterThan: String
@@ -208,19 +212,12 @@ input UserListQueryInput {
   # Where a column is greater than or equal to a value
   whereGreaterThanOrEqual: String
 
-  # Where a list of values for a column contains a value
-  whereArrayContains: String
-
-  # Where a column value is any of array of values
-  whereArrayContainsAny: String
-
   # Where a column value is in an array of values
   whereIn: String
 
-  # The ID of the last result from the current page
-  next: String
+  # Where a column is less than a value
+  whereLessThan: String
 
-  # The ID of the first result from the current
-  back: String
-  hasEmail: Boolean
+  # Where a column is less than or equal to a value
+  whereLessThanOrEqual: String
 }
