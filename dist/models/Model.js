@@ -26,7 +26,7 @@ const type_graphql_1 = require("type-graphql");
 const firebase_admin_1 = require("firebase-admin");
 const pluralize = require("pluralize");
 const date_fns_1 = require("date-fns");
-const listQuery_1 = require("../inputs/listQuery");
+const ListQuery_1 = require("../inputs/ListQuery");
 /**
  * Add capitalization on the first letter of a string
  * @param str The string being capped
@@ -160,7 +160,7 @@ function createResolver(options) {
                         typeof options.model.onBeforeDelete === "function") {
                         const res = yield options.model.onBeforeDelete(Object.assign({ id }, modelBefore), hookOptions);
                         if (res === false) {
-                            return Object.assign({ id }, modelBefore);
+                            return null;
                         }
                     }
                     yield options.model.delete(id);
@@ -193,13 +193,15 @@ function createResolver(options) {
                 : options.authRead
                     ? options.authRead
                     : []),
-            type_graphql_1.Query((returns) => [options.returnType], {
+            type_graphql_1.Query((returns) => options.listReturnType
+                ? options.listReturnType
+                : [options.returnType], {
                 nullable: true,
                 description: `Get a list of ${options.modelName} documents from the ${options.collectionName} collection.`,
             }),
             __param(0, type_graphql_1.Arg("data", () => options.listQueryInputType
                 ? options.listQueryInputType
-                : listQuery_1.default, { nullable: true })),
+                : ListQuery_1.default, { nullable: true })),
             __param(1, type_graphql_1.Ctx()),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [Object, Object]),
@@ -291,7 +293,7 @@ function createResolver(options) {
                     const docs = options.model.onBeforeList &&
                         typeof options.model.onBeforeList === "function"
                         ? yield options.model.onBeforeList(data, Object.assign(Object.assign({}, hookOptions), { context }))
-                        : yield options.model.paginate(data, {
+                        : yield options.model.paginate(data, options.model.onPaginate, {
                             context,
                             roles: options.authList
                                 ? options.authList
@@ -328,13 +330,15 @@ function createResolver(options) {
                 : options.authRead
                     ? options.authRead
                     : []),
-            type_graphql_1.Query((returns) => [options.returnType], {
+            type_graphql_1.Query((returns) => options.listReturnType
+                ? options.listReturnType
+                : [options.returnType], {
                 nullable: true,
                 description: `Get a list of ${options.modelName} documents from the ${options.collectionName} collection.`,
             }),
             __param(0, type_graphql_1.Arg("data", () => options.listQueryInputType
                 ? options.listQueryInputType
-                : listQuery_1.default, { nullable: true })),
+                : ListQuery_1.default, { nullable: true })),
             __param(1, type_graphql_1.Ctx()),
             __metadata("design:type", Function),
             __metadata("design:paramtypes", [Object, Object]),
@@ -410,15 +414,15 @@ class default_1 {
                 query = yield onPaginate(query, options, hookOptions);
             }
             if (options.next || options.back) {
-                const params = (options.next ? options.next : options.back).split(",");
-                let key = 0;
-                for (const value of params) {
-                    params[key] = date_fns_1.isValid(date_fns_1.parseISO(value))
-                        ? new Date(Date.parse(value))
-                        : value;
-                    key = key + 1;
+                const lastDoc = yield this.ref()
+                    .doc(options.next ? options.next : options.back)
+                    .get();
+                if (lastDoc.exists) {
+                    const docData = lastDoc.data();
+                    query = query[options.next ? "startAfter" : "endBefore"](options.orderBy
+                        ? docData[options.orderBy.split(":")[0]]
+                        : docData.createdAt);
                 }
-                query = query[options.next ? "startAfter" : "endBefore"](...params);
             }
             if (options.limit) {
                 query = query.limit(+options.limit);

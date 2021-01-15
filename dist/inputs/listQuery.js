@@ -107,4 +107,4 @@ ListQueryInput = __decorate([
     type_graphql_1.InputType({ description: "The default input to use for all list queries" })
 ], ListQueryInput);
 exports.default = ListQueryInput;
-//# sourceMappingURL=listQuery.js.map
+//# sourceMappingURL=ListQuery.js.map
