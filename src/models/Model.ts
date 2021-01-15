@@ -18,7 +18,7 @@ import {
 import { firestore } from "firebase-admin";
 import * as pluralize from "pluralize";
 import { isValid, parseISO } from "date-fns";
-import ListQueryInput from "../inputs/listQuery";
+import ListQueryInput from "../inputs/ListQuery";
 
 /**
  * Add capitalization on the first letter of a string
@@ -51,6 +51,7 @@ function createResolver<T extends ClassType>(options: {
   inputType: any;
   editType: any;
   listQueryInputType: any;
+  listReturnType: any;
   findQueryName: string;
   listQueryName: string;
   addMutationName: string;
@@ -118,10 +119,16 @@ function createResolver<T extends ClassType>(options: {
           ? options.authRead
           : []
       )
-      @Query((returns) => [options.returnType], {
-        nullable: true,
-        description: `Get a list of ${options.modelName} documents from the ${options.collectionName} collection.`,
-      })
+      @Query(
+        (returns) =>
+          options.listReturnType
+            ? options.listReturnType
+            : [options.returnType],
+        {
+          nullable: true,
+          description: `Get a list of ${options.modelName} documents from the ${options.collectionName} collection.`,
+        }
+      )
       async [options.listQueryName
         ? options.listQueryName
         : `${uncapFirstLetter(options.collectionName)}`](
@@ -135,7 +142,7 @@ function createResolver<T extends ClassType>(options: {
         )
         data?: any,
         @Ctx() context?: any
-      ): Promise<any[]> {
+      ): Promise<any> {
         if (
           options.model.onAuth &&
           typeof options.model.onAuth === "function" &&
@@ -331,7 +338,7 @@ function createResolver<T extends ClassType>(options: {
             hookOptions
           );
           if (res === false) {
-            return { id, ...modelBefore };
+            return null;
           }
         }
         await options.model.delete(id);
@@ -400,10 +407,16 @@ function createResolver<T extends ClassType>(options: {
           ? options.authRead
           : []
       )
-      @Query((returns) => [options.returnType], {
-        nullable: true,
-        description: `Get a list of ${options.modelName} documents from the ${options.collectionName} collection.`,
-      })
+      @Query(
+        (returns) =>
+          options.listReturnType
+            ? options.listReturnType
+            : [options.returnType],
+        {
+          nullable: true,
+          description: `Get a list of ${options.modelName} documents from the ${options.collectionName} collection.`,
+        }
+      )
       async [options.listQueryName
         ? options.listQueryName
         : `${uncapFirstLetter(options.collectionName)}`](
@@ -417,7 +430,7 @@ function createResolver<T extends ClassType>(options: {
         )
         data?: any,
         @Ctx() context?: any
-      ): Promise<any[]> {
+      ): Promise<any> {
         if (
           options.model.onAuth &&
           typeof options.model.onAuth === "function" &&
@@ -427,6 +440,7 @@ function createResolver<T extends ClassType>(options: {
           }))
         )
           return null;
+
         const docs =
           options.model.onBeforeList &&
           typeof options.model.onBeforeList === "function"
@@ -434,7 +448,7 @@ function createResolver<T extends ClassType>(options: {
                 ...hookOptions,
                 context,
               })
-            : await options.model.paginate(data, {
+            : await options.model.paginate(data, options.model.onPaginate, {
                 context,
                 roles: options.authList
                   ? options.authList
@@ -464,6 +478,7 @@ export default class<T extends IEntity> {
       inputType?: any;
       editType?: any;
       listQueryInputType?: any;
+      listReturnType?: any;
       collectionName?: string;
       findQueryName?: string;
       listQueryName?: string;
@@ -500,6 +515,7 @@ export default class<T extends IEntity> {
    */
   async paginate(
     options: {
+      query?: string;
       orderBy?: string;
       limit?: number;
       next?: string;
@@ -592,16 +608,19 @@ export default class<T extends IEntity> {
     }
 
     if (options.next || options.back) {
-      const params = (options.next ? options.next : options.back).split(",");
-      let key = 0;
-      for (const value of params as any) {
-        params[key] = isValid(parseISO(value))
-          ? new Date(Date.parse(value))
-          : value;
-        key = key + 1;
+      const lastDoc = await this.ref()
+        .doc(options.next ? options.next : options.back)
+        .get();
+      if (lastDoc.exists) {
+        const docData: any = lastDoc.data();
+        query = query[options.next ? "startAfter" : "endBefore"](
+          options.orderBy
+            ? docData[options.orderBy.split(":")[0]]
+            : docData.createdAt
+        );
       }
-      query = query[options.next ? "startAfter" : "endBefore"](...params);
     }
+
     if (options.limit) {
       query = query.limit(+options.limit);
     }
